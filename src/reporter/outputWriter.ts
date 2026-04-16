@@ -37,10 +37,15 @@ export function writeOutput(report: Report, options: WriteOptions): void {
   const content = serializeReport(report, options.format);
   if (options.outputPath) {
     const dir = path.dirname(options.outputPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(options.outputPath, content, 'utf-8');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to write report to "${options.outputPath}": ${message}`);
     }
-    fs.writeFileSync(options.outputPath, content, 'utf-8');
   } else {
     process.stdout.write(content + '\n');
   }
