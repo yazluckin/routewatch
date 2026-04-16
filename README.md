@@ -42,6 +42,7 @@ npx routewatch scan
 | `--dir <path>`    | Path to your API routes directory        |
 | `--ignore <glob>` | Glob pattern for routes to ignore        |
 | `--json`          | Output results as JSON                   |
+| `--fail-on-warn`  | Exit with code 1 if any issues are found |
 
 ```bash
 npx routewatch scan --dir src/app/api --ignore "**/internal/**" --json
@@ -57,6 +58,7 @@ Optionally add a `routewatch.config.ts` file to your project root:
 export default {
   dir: "src/app/api",
   ignore: ["**/internal/**"],
+  failOnWarn: true,
 };
 ```
 
