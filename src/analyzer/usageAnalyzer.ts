@@ -8,12 +8,20 @@ export interface RouteUsage {
   callers: string[];
 }
 
-const FETCH_PATTERN = /fetch\(['"`]([^'"`]+)['"`]/g;
-const AXIOS_PATTERN = /axios\.(get|post|put|patch|delete|head)\(['"`]([^'"`]+)['"`]/g;
-const NEXT_ROUTER_PATTERN = /router\.(push|replace)\(['"`](\/api\/[^'"`]+)['"`]/g;
+const FETCH_PATTERN = /fetch\(['"\`]([^'"\`]+)['"\`]/g;
+const AXIOS_PATTERN = /axios\.(get|post|put|patch|delete|head)\(['"\`]([^'"\`]+)['"\`]/g;
+const NEXT_ROUTER_PATTERN = /router\.(push|replace)\(['"\`](\/api\/[^'"\`]+)['"\`]/g;
 
 export function extractApiCallsFromFile(filePath: string): Array<{ url: string; method: string }> {
-  const content = fs.readFileSync(filePath, 'utf-8');
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, 'utf-8');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[routewatch] Could not read file "${filePath}": ${message}`);
+    return [];
+  }
+
   const calls: Array<{ url: string; method: string }> = [];
 
   let match: RegExpExecArray | null;
@@ -22,7 +30,7 @@ export function extractApiCallsFromFile(filePath: string): Array<{ url: string; 
   while ((match = FETCH_PATTERN.exec(content)) !== null) {
     const url = match[1];
     if (url.includes('/api/')) {
-      const methodMatch = content.slice(0, match.index).match(/method:\s*['"`](GET|POST|PUT|PATCH|DELETE)['"`]/i);
+      const methodMatch = content.slice(0, match.index).match(/method:\s*['"\`](GET|POST|PUT|PATCH|DELETE)['"\`]/i);
       calls.push({ url, method: methodMatch ? methodMatch[1].toUpperCase() : 'GET' });
     }
   }
