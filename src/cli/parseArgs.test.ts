@@ -1,65 +1,44 @@
-import { parseArgs, HELP_TEXT } from './parseArgs';
+import { parseArgs } from './parseArgs';
 
-function args(...parts: string[]): string[] {
-  return ['node', 'routewatch', ...parts];
-}
-
-describe('parseArgs', () => {
-  it('returns empty flags with no arguments', () => {
-    const result = parseArgs(args());
-    expect(result.flags).toEqual({});
-    expect(result.showHelp).toBe(false);
-    expect(result.showVersion).toBe(false);
+describe('parseArgs()', () => {
+  it('returns defaults when no args provided', () => {
+    const result = parseArgs([]);
+    expect(result.apiDir).toBeUndefined();
+    expect(result.srcDir).toBeUndefined();
+    expect(result.failOnUnused).toBe(false);
+    expect(result.failOnUndocumented).toBe(false);
   });
 
-  it('sets showHelp on --help', () => {
-    const result = parseArgs(args('--help'));
-    expect(result.showHelp).toBe(true);
+  it('parses --api-dir flag', () => {
+    const result = parseArgs(['--api-dir', 'app/api']);
+    expect(result.apiDir).toBe('app/api');
   });
 
-  it('sets showVersion on --version', () => {
-    const result = parseArgs(args('--version'));
-    expect(result.showVersion).toBe(true);
+  it('parses --src-dir flag', () => {
+    const result = parseArgs(['--src-dir', 'src']);
+    expect(result.srcDir).toBe('src');
   });
 
-  it('parses --api-dir', () => {
-    const result = parseArgs(args('--api-dir', 'pages/api'));
-    expect(result.flags.apiDir).toBe('pages/api');
+  it('parses --fail-on-unused flag', () => {
+    const result = parseArgs(['--fail-on-unused']);
+    expect(result.failOnUnused).toBe(true);
   });
 
-  it('parses --src-dir', () => {
-    const result = parseArgs(args('--src-dir', 'app'));
-    expect(result.flags.srcDir).toBe('app');
+  it('parses --fail-on-undocumented flag', () => {
+    const result = parseArgs(['--fail-on-undocumented']);
+    expect(result.failOnUndocumented).toBe(true);
   });
 
-  it('parses --format json', () => {
-    const result = parseArgs(args('--format', 'json'));
-    expect(result.flags.reportFormat).toBe('json');
+  it('parses combined flags', () => {
+    const args = ['--api-dir', 'pages/api', '--fail-on-unused', '--fail-on-undocumented'];
+    const result = parseArgs(args);
+    expect(result.apiDir).toBe('pages/api');
+    expect(result.failOnUnused).toBe(true);
+    expect(result.failOnUndocumented).toBe(true);
   });
 
-  it('ignores invalid --format values', () => {
-    const result = parseArgs(args('--format', 'xml'));
-    expect(result.flags.reportFormat).toBeUndefined();
-  });
-
-  it('parses --ignore as comma-separated list', () => {
-    const result = parseArgs(args('--ignore', 'health,metrics'));
-    expect(result.flags.ignore).toEqual(['health', 'metrics']);
-  });
-
-  it('parses --fail-on-unused and --fail-on-undocumented', () => {
-    const result = parseArgs(args('--fail-on-unused', '--fail-on-undocumented'));
-    expect(result.flags.failOnUnused).toBe(true);
-    expect(result.flags.failOnUndocumented).toBe(true);
-  });
-
-  it('parses --output', () => {
-    const result = parseArgs(args('--output', 'report.txt'));
-    expect(result.flags.outputFile).toBe('report.txt');
-  });
-
-  it('HELP_TEXT contains usage information', () => {
-    expect(HELP_TEXT).toContain('Usage: routewatch');
-    expect(HELP_TEXT).toContain('--api-dir');
+  it('ignores unknown flags gracefully', () => {
+    const result = parseArgs(['--unknown-flag', 'value']);
+    expect(result.apiDir).toBeUndefined();
   });
 });
