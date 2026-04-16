@@ -1,2 +1,2 @@
-export { analyzeUsage, extractApiCallsFromFile, walkSourceFiles } from './usageAnalyzer';
-export type { RouteUsage } from './usageAnalyzer';
+export * from './usageAnalyzer';
+export * from './deadRouteDetector';
