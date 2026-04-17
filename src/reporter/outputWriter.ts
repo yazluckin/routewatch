@@ -9,6 +9,11 @@ export interface WriteOptions {
   outputPath?: string;
 }
 
+/**
+ * Serializes a Report into a string in the specified format.
+ * @param report - The report to serialize.
+ * @param format - 'json' for JSON output, 'text' for human-readable output.
+ */
 export function serializeReport(report: Report, format: OutputFormat): string {
   if (format === 'json') {
     return JSON.stringify(report, null, 2);
@@ -33,6 +38,10 @@ export function serializeReport(report: Report, format: OutputFormat): string {
   return lines.join('\n');
 }
 
+/**
+ * Writes the report to a file or stdout based on the provided options.
+ * Throws a descriptive error if the file cannot be written.
+ */
 export function writeOutput(report: Report, options: WriteOptions): void {
   const content = serializeReport(report, options.format);
   if (options.outputPath) {
