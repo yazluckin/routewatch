@@ -1,11 +1,18 @@
-#!/usr/bin/env node
-import { run } from './cli/runner';
+export { scanRoutes } from './scanner';
+export { analyzeUsage } from './analyzer';
+export { generateReport, formatReportText, serializeReport, writeOutput, computeStats, formatSummary } from './reporter';
+export type { SummaryStats } from './reporter';
 
-run().catch((err: unknown) => {
-  if (err instanceof Error) {
-    console.error('routewatch error:', err.message);
-  } else {
-    console.error('routewatch encountered an unexpected error.');
-  }
-  process.exit(1);
-});
+export interface RouteInfo {
+  path: string;
+  methods: string[];
+  documented: boolean;
+  filePath: string;
+}
+
+export interface RouteReport {
+  routes: RouteInfo[];
+  deadRoutes: RouteInfo[];
+  undocumentedRoutes: RouteInfo[];
+  generatedAt: string;
+}
