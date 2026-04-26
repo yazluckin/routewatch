@@ -1,59 +1,95 @@
-import { describe, it, expect } from "vitest";
-import { extractMiddlewareInfo, analyzeRouteMiddleware, MiddlewareInfo } from "./routeMiddlewareAnalyzer";
-import { ScannedRoute } from "../scanner";
+import { describe, it, expect } from 'vitest';
+import { extractMiddlewareInfo, analyzeRouteMiddleware } from './routeMiddlewareAnalyzer';
+import type { ScannedRoute } from '../scanner/routeScanner';
 
 function makeRoute(overrides: Partial<ScannedRoute> = {}): ScannedRoute {
   return {
-    filePath: "/app/api/users/route.ts",
-    routePath: "/api/users",
-    methods: ["GET"],
+    filePath: '/project/src/pages/api/users.ts',
+    routePath: '/api/users',
+    methods: ['GET'],
     hasJsDoc: false,
-    sourceText: "",
+    jsDocComment: '',
     ...overrides,
   };
 }
 
-describe("extractMiddlewareInfo", () => {
-  it("returns high risk when no middleware detected", () => {
-    const route = makeRoute({ sourceText: "export async function GET() {}" });
-    const result = extractMiddlewareInfo(route);
-    expect(result.risk).toBe("high");
-    expect(result.missingAuth).toBe(true);
-    expect(result.missingRateLimit).toBe(true);
-    expect(result.missingCors).toBe(true);
-    expect(result.detectedMiddleware).toHaveLength(0);
+describe('extractMiddlewareInfo', () => {
+  it('returns no middleware for empty jsDoc', () => {
+    const route = makeRoute({ jsDocComment: '' });
+    const info = extractMiddlewareInfo(route);
+    expect(info.middlewares).toEqual([]);
+    expect(info.hasAuth).toBe(false);
+    expect(info.hasRateLimit).toBe(false);
+    expect(info.hasLogging).toBe(false);
+    expect(info.hasCors).toBe(false);
   });
 
-  it("detects auth middleware", () => {
-    const route = makeRoute({ sourceText: "withAuth(handler)" });
-    const result = extractMiddlewareInfo(route);
-    expect(result.detectedMiddleware).toContain("auth");
-    expect(result.missingAuth).toBe(false);
+  it('detects @middleware tags', () => {
+    const route = makeRoute({
+      jsDocComment: '/** @middleware auth\n * @middleware rateLimit\n */',
+    });
+    const info = extractMiddlewareInfo(route);
+    expect(info.middlewares).toContain('auth');
+    expect(info.middlewares).toContain('rateLimit');
   });
 
-  it("returns none risk when all middleware present", () => {
-    const source = "withAuth(rateLimit(cors(handler)))";
-    const route = makeRoute({ sourceText: source });
-    const result = extractMiddlewareInfo(route);
-    expect(result.risk).toBe("none");
-    expect(result.missingAuth).toBe(false);
-    expect(result.missingRateLimit).toBe(false);
-    expect(result.missingCors).toBe(false);
+  it('sets hasAuth when auth middleware present', () => {
+    const route = makeRoute({
+      jsDocComment: '/** @middleware auth */',
+    });
+    const info = extractMiddlewareInfo(route);
+    expect(info.hasAuth).toBe(true);
   });
 
-  it("returns medium risk when two middleware missing", () => {
-    const route = makeRoute({ sourceText: "withAuth(handler)" });
-    const result = extractMiddlewareInfo(route);
-    expect(result.risk).toBe("medium");
+  it('sets hasRateLimit when rateLimit middleware present', () => {
+    const route = makeRoute({
+      jsDocComment: '/** @middleware rateLimit */',
+    });
+    const info = extractMiddlewareInfo(route);
+    expect(info.hasRateLimit).toBe(true);
+  });
+
+  it('sets hasLogging when logging middleware present', () => {
+    const route = makeRoute({
+      jsDocComment: '/** @middleware logging */',
+    });
+    const info = extractMiddlewareInfo(route);
+    expect(info.hasLogging).toBe(true);
+  });
+
+  it('sets hasCors when cors middleware present', () => {
+    const route = makeRoute({
+      jsDocComment: '/** @middleware cors */',
+    });
+    const info = extractMiddlewareInfo(route);
+    expect(info.hasCors).toBe(true);
   });
 });
 
-describe("analyzeRouteMiddleware", () => {
-  it("maps all routes", () => {
-    const routes = [makeRoute(), makeRoute({ routePath: "/api/posts" })];
-    const results = analyzeRouteMiddleware(routes);
-    expect(results).toHaveLength(2);
-    expect(results[0].route.routePath).toBe("/api/users");
-    expect(results[1].route.routePath).toBe("/api/posts");
+describe('analyzeRouteMiddleware', () => {
+  it('returns an entry per route', () => {
+    const routes = [
+      makeRoute({ routePath: '/api/users' }),
+      makeRoute({ routePath: '/api/posts' }),
+    ];
+    const result = analyzeRouteMiddleware(routes);
+    expect(result).toHaveLength(2);
+  });
+
+  it('flags routes with no middleware', () => {
+    const routes = [makeRoute({ jsDocComment: '' })];
+    const result = analyzeRouteMiddleware(routes);
+    expect(result[0].middlewareInfo.middlewares).toHaveLength(0);
+  });
+
+  it('captures middleware for all routes', () => {
+    const routes = [
+      makeRoute({ jsDocComment: '/** @middleware auth @middleware cors */' }),
+      makeRoute({ routePath: '/api/public', jsDocComment: '' }),
+    ];
+    const result = analyzeRouteMiddleware(routes);
+    expect(result[0].middlewareInfo.hasAuth).toBe(true);
+    expect(result[0].middlewareInfo.hasCors).toBe(true);
+    expect(result[1].middlewareInfo.hasAuth).toBe(false);
   });
 });
